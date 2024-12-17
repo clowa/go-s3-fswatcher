@@ -25,7 +25,9 @@ type configuration struct {
 
 func main() {
 	log.Print("Starting S3 File Watcher")
-	loadConfig()
+	if loadConfig() {
+		log.Fatal("Failed to load configuration")
+	}
 
 	// Since files only have content after a Write event, we don't need to listen to Create events
 	events := []fsnotify.Op{fsnotify.Write}
@@ -43,13 +45,14 @@ func main() {
 	go startEventHandler(&wg, ch)
 
 	// Yield the processor to allow other gorotines to run and prevent the main goroutine from exiting
-	runtime.Gosched()
+	runtime.Gosched() // kind of ugly, should find a better way to do this
 	// Wait for all goroutines to finish
 	wg.Wait()
 }
 
-// loadConfig loads configuration values from environment variables and run validation checks
-func loadConfig() {
+// loadConfig loads configuration values from environment variables and run validation checks.
+// It returns true if the configuration values are valid, false otherwise.
+func loadConfig() bool {
 	// Define CLI flags
 	sourceFlag := flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
 	bucketFlag := flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
@@ -78,11 +81,12 @@ func loadConfig() {
 	}
 
 	// Validate configuration values
-	validateConfig()
+	return validateConfig()
 }
 
-// validateConfig encapsulates the validation logic for the configuration values
-func validateConfig() {
+// validateConfig encapsulates the validation logic for the configuration values.
+// It returns true if the configuration values are valid, false otherwise.
+func validateConfig() bool {
 	// Check for required environment variables are set
 	requiredEnvVars := []string{"AWS_DEFAULT_REGION", "WATCH_DIR", "S3_BUCKET_NAME", "S3_BUCKET_PREFIX"}
 	missingEnvVar := false
@@ -94,24 +98,26 @@ func validateConfig() {
 	}
 
 	if missingEnvVar || (config.watch_dir == "" || config.bucket_name == "" || config.bucket_prefix == "") {
-		log.Fatal("Required configuration values are missing")
-		os.Exit(2)
+		log.Printf("Required configuration values are missing")
+		return false
 	}
 
 	// Validate source directory
 	if _, err := os.Stat(config.watch_dir); os.IsNotExist(err) {
-		log.Fatalf("Invalid source directory. Please provide a valid directory path. Example: /path/to/source")
+		log.Printf("Invalid source directory. Please provide a valid directory path. Example: /path/to/source")
 	}
 
 	// Validate bucket name
 	if config.bucket_name == "" {
-		log.Fatalf("Invalid S3 bucket name. Please provide a valid bucket name. Example: my-s3-bucket")
+		log.Printf("Invalid S3 bucket name. Please provide a valid bucket name. Example: my-s3-bucket")
 	}
 
 	// Validate prefix
 	if config.bucket_prefix == "" {
-		log.Fatalf("Invalid S3 prefix. Please provide a valid prefix. Example: my-prefix/")
+		log.Printf("Invalid S3 prefix. Please provide a valid prefix. Example: my-prefix/")
 	}
+
+	return true
 }
 
 // startedFilteredWatcher starts a watcher on a directory and filters events based on the provided event list.
