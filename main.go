@@ -46,26 +46,49 @@ func main() {
 	wg.Wait()
 }
 
+// loadConfig loads configuration values from environment variables and run validation checks
 func loadConfig() {
+
+	// Load configuration from environment variables
+	config.watch_dir = os.Getenv("WATCH_DIR")
+	config.bucket_name = os.Getenv("S3_BUCKET_NAME")
+	config.bucket_prefix = os.Getenv("S3_BUCKET_PREFIX")
+
+	// Validate configuration values
+	validateConfig()
+}
+
+// validateConfig encapsulates the validation logic for the configuration values
+func validateConfig() {
 	// Check for required environment variables are set
 	requiredEnvVars := []string{"AWS_DEFAULT_REGION", "WATCH_DIR", "S3_BUCKET_NAME", "S3_BUCKET_PREFIX"}
-	missing := false
+	missingEnvVar := false
 	for _, envVar := range requiredEnvVars {
 		if os.Getenv(envVar) == "" {
-			missing = true
+			missingEnvVar = true
 			log.Fatalf("Environment variable %s is required", envVar)
 		}
 	}
 
-	if missing {
-		log.Fatal("Missing required environment variables")
-		os.Exit(1)
+	if missingEnvVar {
+		log.Fatal("Required configuration values are missing")
+		os.Exit(2)
 	}
 
-	// Load environment variables into config
-	config.watch_dir = os.Getenv("WATCH_DIR")
-	config.bucket_name = os.Getenv("S3_BUCKET_NAME")
-	config.bucket_prefix = os.Getenv("S3_BUCKET_PREFIX")
+	// Validate source directory
+	if _, err := os.Stat(config.watch_dir); os.IsNotExist(err) {
+		log.Fatalf("Invalid source directory. Please provide a valid directory path. Example: /path/to/source")
+	}
+
+	// Validate bucket name
+	if config.bucket_name == "" {
+		log.Fatalf("Invalid S3 bucket name. Please provide a valid bucket name. Example: my-s3-bucket")
+	}
+
+	// Validate prefix
+	if config.bucket_prefix == "" {
+		log.Fatalf("Invalid S3 prefix. Please provide a valid prefix. Example: my-prefix/")
+	}
 }
 
 // startedFilteredWatcher starts a watcher on a directory and filters events based on the provided event list.
