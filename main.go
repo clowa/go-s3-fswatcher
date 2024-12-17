@@ -148,8 +148,6 @@ func startEventHandler(wg *sync.WaitGroup, ch chan fsnotify.Event) {
 		event := <-ch
 		switch event.Op {
 		case fsnotify.Write:
-			log.Printf("Write: %s", event.Name)
-
 			// Get infos about the file firing the event
 			filename := filepath.Base(event.Name)
 			path := event.Name
@@ -171,7 +169,9 @@ func startEventHandler(wg *sync.WaitGroup, ch chan fsnotify.Event) {
 			size := info.Size()
 
 			// Check if the file is larger than 50 MiB. If it is, use the multipart upload to avoid loading whole file into memory
-			if info.Size() > 50*1024*1024 {
+			if size == 0 {
+				log.Printf("Skipping empty file %s", filename)
+			} else if size > 50*1024*1024 {
 				log.Printf("Uploading large file %s (%d bytes) at %s to %s", filename, size, path, objKey)
 				go basicConfig.UploadLargeFile(wg, context.TODO(), config.bucket_name, objKey, path)
 			} else {
