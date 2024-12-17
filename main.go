@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log"
 	"os"
 	"path/filepath"
@@ -47,25 +48,67 @@ func main() {
 }
 
 func loadConfig() {
+	// Define CLI flags
+	sourceFlag := flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
+	bucketFlag := flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
+	prefixFlag := flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
+
+	// Parse CLI flags
+	flag.Parse()
+
+	// Load configuration from CLI flags or environment variables
+	if *sourceFlag != "" {
+		config.watch_dir = *sourceFlag
+	} else {
+		config.watch_dir = os.Getenv("WATCH_DIR")
+	}
+
+	if *bucketFlag != "" {
+		config.bucket_name = *bucketFlag
+	} else {
+		config.bucket_name = os.Getenv("S3_BUCKET_NAME")
+	}
+
+	if *prefixFlag != "" {
+		config.bucket_prefix = *prefixFlag
+	} else {
+		config.bucket_prefix = os.Getenv("S3_BUCKET_PREFIX")
+	}
+
+	// Validate configuration values
+	validateConfig()
+}
+
+func validateConfig() {
 	// Check for required environment variables are set
 	requiredEnvVars := []string{"AWS_DEFAULT_REGION", "WATCH_DIR", "S3_BUCKET_NAME", "S3_BUCKET_PREFIX"}
-	missing := false
+	missingEnvVar := false
 	for _, envVar := range requiredEnvVars {
 		if os.Getenv(envVar) == "" {
-			missing = true
+			missingEnvVar = true
 			log.Fatalf("Environment variable %s is required", envVar)
 		}
 	}
 
-	if missing {
-		log.Fatal("Missing required environment variables")
-		os.Exit(1)
+	if missingEnvVar || (config.watch_dir == "" || config.bucket_name == "" || config.bucket_prefix == ""){
+		log.Fatal("Required configuration values are missing")
+		os.Exit(2)
 	}
 
-	// Load environment variables into config
-	config.watch_dir = os.Getenv("WATCH_DIR")
-	config.bucket_name = os.Getenv("S3_BUCKET_NAME")
-	config.bucket_prefix = os.Getenv("S3_BUCKET_PREFIX")
+	// Validate source directory
+	if _, err := os.Stat(config.watch_dir); os.IsNotExist(err) {
+		log.Fatalf("Invalid source directory. Please provide a valid directory path. Example: /path/to/source")
+	}
+
+	// Validate bucket name
+	if config.bucket_name == "" {
+		log.Fatalf("Invalid S3 bucket name. Please provide a valid bucket name. Example: my-s3-bucket")
+	}
+
+	// Validate prefix
+	if config.bucket_prefix == "" {
+		log.Fatalf("Invalid S3 prefix. Please provide a valid prefix. Example: my-prefix/")
+	}
 }
 
 // startedFilteredWatcher starts a watcher on a directory and filters events based on the provided event list.
