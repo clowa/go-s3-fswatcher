@@ -151,6 +151,8 @@ func startedFilteredWatcher(wg *sync.WaitGroup, dir string, ch chan fsnotify.Eve
 // startEventHandler reacts to subscribed events.
 // Take care to handle the subscribed events in a separate goroutine to avoid blocking the watcher.
 func startEventHandler(wg *sync.WaitGroup, ch chan fsnotify.Event) {
+	const largeFileThreshold = 50 * 1024 * 1024 // 50 MiB
+
 	wg.Add(1)
 	defer wg.Done()
 
@@ -192,10 +194,10 @@ func startEventHandler(wg *sync.WaitGroup, ch chan fsnotify.Event) {
 			}
 			size := info.Size()
 
-			// Check if the file is larger than 50 MiB. If it is, use the multipart upload to avoid loading whole file into memory
+			// Check if the file is larger than threshold. If it is, use the multipart upload to avoid loading whole file into memory
 			if size == 0 {
 				log.Printf("Skipping empty file %s", filename)
-			} else if size > 50*1024*1024 {
+			} else if size > largeFileThreshold {
 				log.Printf("Uploading large file %s (%d bytes) at %s to %s", filename, size, path, objKey)
 				go basicConfig.UploadLargeFile(wg, context.TODO(), config.bucket_name, objKey, path)
 			} else {
