@@ -1,0 +1,16 @@
+version: "3.7"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - AWS_DEFAULT_REGION=eu-central-1
+      - WATCH_DIR=/watch
+      - S3_BUCKET_NAME=data-cedric
+      - S3_BUCKET_PREFIX=archive/home-assistant
+    # Read sensitive environment variables (like AWS auth) from .env file
+    env_file: .env
+    volumes:
+      - ./watch:/watch

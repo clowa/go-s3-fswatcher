@@ -23,14 +23,16 @@
         "task.vscode-task",
         "AquaSecurityOfficial.trivy-vulnerability-scanner",
         "ms-vscode.go",
-        "golang.go"
+        "golang.go",
+        "ms-azuretools.vscode-docker"
       ]
     }
   },
 
   "features": {
     "ghcr.io/devcontainers-contrib/features/go-task:1": {},
-    "ghcr.io/devcontainers-contrib/features/trivy:1": {}
+    "ghcr.io/devcontainers-contrib/features/trivy:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
   }
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
