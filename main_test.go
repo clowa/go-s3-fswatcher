@@ -34,6 +34,7 @@ func TestLoadConfigFromFlags(t *testing.T) {
 	flag.Set("source", "./watch")
 	flag.Set("bucket", "new-s3-bucket")
 	flag.Set("prefix", "new-prefix")
+	flag.Set("region", "eu-central-1")
 
 	loadConfig()
 
@@ -45,6 +46,9 @@ func TestLoadConfigFromFlags(t *testing.T) {
 	}
 	if config.bucket_prefix != "new-prefix" {
 		t.Errorf("Expected bucket_prefix to be new-prefix, got %s", config.bucket_prefix)
+	}
+	if config.aws_region != "eu-central-1" {
+		t.Errorf("Expected aws_region to be eu-central-1, got %s", config.aws_region)
 	}
 }
 
@@ -61,7 +65,7 @@ func TestLoadConfigMissingEnvVarsAndFlags(t *testing.T) {
 	}
 }
 
-func TestValidateConfig(t *testing.T) {
+func TestValidateConfigEnvVars(t *testing.T) {
 	os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 	os.Setenv("WATCH_DIR", "/path/to/watch")
 	os.Setenv("S3_BUCKET_NAME", "my-s3-bucket")
@@ -74,7 +78,25 @@ func TestValidateConfig(t *testing.T) {
 	}
 }
 
-func TestValidateConfigMissingEnvVars(t *testing.T) {
+func TestValidateConfigFlags(t *testing.T) {
+	os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
+	os.Setenv("WATCH_DIR", "./.vscode")
+	os.Setenv("S3_BUCKET_NAME", "my-s3-bucket")
+	os.Setenv("S3_BUCKET_PREFIX", "my-prefix")
+
+	flag.Set("source", "./watch")
+	flag.Set("bucket", "new-s3-bucket")
+	flag.Set("prefix", "new-prefix")
+	flag.Set("region", "eu-central-1")
+
+	valid := validateConfig()
+
+	if !valid {
+		t.Errorf("Expected validateConfig to return true for valid configuration")
+	}
+}
+
+func TestValidateConfigMissingEnvVarsAndFlags(t *testing.T) {
 	os.Unsetenv("AWS_DEFAULT_REGION")
 	os.Unsetenv("WATCH_DIR")
 	os.Unsetenv("S3_BUCKET_NAME")
