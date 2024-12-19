@@ -21,7 +21,7 @@ var (
 	sourceFlag = flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
 	bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
 	prefixFlag = flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
-	regionFlag = flag.String("region", "", "The AWS region to use. Example: us-west-2")
+	regionFlag = flag.String("region", "us-west-2", "The AWS region to use. Example: us-west-2")
 )
 
 type configuration struct {
@@ -64,6 +64,8 @@ func loadConfig() bool {
 	// Parse CLI flags
 	flag.Parse()
 
+	config.aws_region = *regionFlag
+
 	// Load configuration from CLI flags or environment variables
 	if *sourceFlag != "" {
 		config.watch_dir = *sourceFlag
@@ -83,12 +85,6 @@ func loadConfig() bool {
 		config.bucket_prefix = os.Getenv("S3_BUCKET_PREFIX")
 	}
 
-	if *regionFlag != "" {
-		config.aws_region = *regionFlag
-	} else {
-		config.aws_region = os.Getenv("AWS_DEFAULT_REGION")
-	}
-
 	// Validate configuration values
 	return validateConfig()
 }
@@ -96,7 +92,7 @@ func loadConfig() bool {
 // validateConfig encapsulates the validation logic for the configuration values.
 // It returns true if the configuration values are valid, false otherwise.
 func validateConfig() bool {
-	if config.watch_dir == "" || config.bucket_name == "" || config.bucket_prefix == "") {
+	if config.watch_dir == "" || config.bucket_name == "" || config.bucket_prefix == "" {
 		log.Printf("Required configuration values are missing")
 		return false
 	}
@@ -114,14 +110,6 @@ func validateConfig() bool {
 	// Validate prefix
 	if config.bucket_prefix == "" {
 		log.Printf("Invalid S3 prefix. Please provide a valid prefix. Example: my-prefix/")
-	}
-
-	// Set default AWS region if not provided
-	if config.aws_region == "" {
-		config.aws_region = "us-west-2"
-		// Set environment variable to be picked up by AWS SDK
-		os.Setenv("AWS_DEFAULT_REGION", config.aws_region)
-		log.Printf("AWS_DEFAULT_REGION not set. Using default region: %s", config.aws_region)
 	}
 
 	return true
@@ -175,7 +163,10 @@ func startEventHandler(wg *sync.WaitGroup, ch chan fsnotify.Event) {
 	}
 
 	// Create an S3 client
-	client := s3.NewFromConfig(cfg)
+	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
+		o.Region = config.aws_region
+	})
+
 	basicConfig := basic.BucketBasics{S3Client: client}
 
 	// Handle events
