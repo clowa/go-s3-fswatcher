@@ -6,10 +6,37 @@ This is a small binary to upload a local directory to s3. It's mainly designed t
 
 The binary expects AWS default credentials to be available in the environment. This can ether be configured via [environment variables](https://docs.aws.amazon.com/cli/v1/userguide/cli-configure-envvars.html) or via the [shared credentials file](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) at `~/.aws/credentials`.
 
-The binary expects the following arguments:
+The binary expects the following configuration:
 
-| Environment Variable | Description |
-|----------------------|-------------|
-| `WATCH_DIR` | The directory to upload to s3 |
-| `S3_BUCKET_NAME` | The name of the bucket to upload the files to |
-| `S3_BUCKET_PREFIX` | The directory to upload to s3 |
+
+| CLI Flag   | Environment Variable | Description | Example |
+|------------|----------------------|-------------|---------|
+| `--source` | `WATCH_DIR` | The directory to upload to s3 | `/path/to/source` |
+| `--bucket` | `S3_BUCKET_NAME` | The name of the bucket to upload the files to | `my-s3-bucket` |
+| `--prefix` | `S3_BUCKET_PREFIX` | The directory to upload to s3 | `my-prefix/` |
+
+If both CLI flags and environment variables are provided, the CLI flags will override the corresponding environment variables. If neither are provided, the program will terminate with an error message indicating the missing environment variables.
+
+## Run Tests
+
+### Run Unit Tests
+
+To run the unit tests of the whole project, use the following command:
+
+```sh
+go test ./...
+```
+
+### Running Integration Tests
+
+Make sure to build the binary before running the tests:
+
+```sh
+go build -o go-s3-fswatcher
+```
+
+To run the integration tests, use the following command:
+
+```sh
+go test ./... -tags=integration
+```
