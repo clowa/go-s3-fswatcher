@@ -34,7 +34,7 @@ func (basics BucketBasics) UploadFile(wg *sync.WaitGroup, ctx context.Context, b
 	}
 	defer file.Close()
 
-	_, err = basics.S3Client.PutObject(ctx, &s3.PutObjectInput{
+	o, err := basics.S3Client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(objectKey),
 		Body:   file,
@@ -57,7 +57,7 @@ func (basics BucketBasics) UploadFile(wg *sync.WaitGroup, ctx context.Context, b
 	if err != nil {
 		log.Printf("Failed attempt to wait for object %s to exist.\n", objectKey)
 	}
-	log.Printf("Successfully uploaded %v to %v:%v\n", fileName, bucketName, objectKey)
+	log.Printf("Successfully uploaded %v to %v:%v ETag: %s\n ", fileName, bucketName, objectKey, *o.ETag)
 
 	return err
 }
@@ -81,7 +81,7 @@ func (basics BucketBasics) UploadLargeFile(wg *sync.WaitGroup, ctx context.Conte
 		u.Concurrency = 5
 		u.PartSize = partMiBs * 1024 * 1024
 	})
-	_, err = uploader.Upload(ctx, &s3.PutObjectInput{
+	o, err := uploader.Upload(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(bucketName),
 		Key:    aws.String(objectKey),
 		Body:   file,
@@ -103,7 +103,7 @@ func (basics BucketBasics) UploadLargeFile(wg *sync.WaitGroup, ctx context.Conte
 	if err != nil {
 		log.Printf("Failed attempt to wait for object %s to exist.\n", objectKey)
 	}
-	log.Printf("Successfully uploaded large object %v to %v:%v\n", fileName, bucketName, objectKey)
+	log.Printf("Successfully uploaded %v to %v:%v ETag: %s\n", fileName, bucketName, objectKey, *o.ETag)
 
 	return err
 }
