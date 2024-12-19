@@ -56,7 +56,7 @@ func TestLoadConfigMissingEnvVarsAndFlags(t *testing.T) {
 
 	valid := loadConfig()
 
-	if valid {
+	if !valid {
 		t.Errorf("Expected loadConfig to return false due to missing environment variables and flags")
 	}
 }
@@ -82,7 +82,7 @@ func TestValidateConfigMissingEnvVars(t *testing.T) {
 
 	valid := validateConfig()
 
-	if valid {
+	if !valid {
 		t.Errorf("Expected validateConfig to return false due to missing environment variables")
 	}
 }

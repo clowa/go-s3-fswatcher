@@ -33,7 +33,7 @@ type configuration struct {
 
 func main() {
 	log.Print("Starting S3 File Watcher")
-	if loadConfig() {
+	if !loadConfig() {
 		log.Fatal("Failed to load configuration")
 	}
 
@@ -92,24 +92,22 @@ func loadConfig() bool {
 // validateConfig encapsulates the validation logic for the configuration values.
 // It returns true if the configuration values are valid, false otherwise.
 func validateConfig() bool {
-	if config.watch_dir == "" || config.bucket_name == "" || config.bucket_prefix == "" {
-		log.Printf("Required configuration values are missing")
-		return false
-	}
-
 	// Validate source directory
 	if _, err := os.Stat(config.watch_dir); os.IsNotExist(err) {
 		log.Printf("Invalid source directory. Please provide a valid directory path. Example: /path/to/source")
+		return false
 	}
 
 	// Validate bucket name
 	if config.bucket_name == "" {
 		log.Printf("Invalid S3 bucket name. Please provide a valid bucket name. Example: my-s3-bucket")
+		return false
 	}
 
 	// Validate prefix
 	if config.bucket_prefix == "" {
 		log.Printf("Invalid S3 prefix. Please provide a valid prefix. Example: my-prefix/")
+		return false
 	}
 
 	return true
