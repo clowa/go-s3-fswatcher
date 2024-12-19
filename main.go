@@ -32,10 +32,10 @@ type configuration struct {
 }
 
 func main() {
-	log.Print("Starting S3 File Watcher")
 	if !loadConfig() {
 		log.Fatal("Failed to load configuration")
 	}
+	log.Print("Starting S3 File Watcher")
 
 	// Since files only have content after a Write event, we don't need to listen to Create events
 	events := []fsnotify.Op{fsnotify.Write}
