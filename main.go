@@ -15,7 +15,13 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
-var config configuration
+var (
+	config configuration
+	// Define CLI flags
+	sourceFlag = flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
+	bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
+	prefixFlag = flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
+)
 
 type configuration struct {
 	watch_dir     string
@@ -53,11 +59,6 @@ func main() {
 // loadConfig loads configuration values from environment variables and run validation checks.
 // It returns true if the configuration values are valid, false otherwise.
 func loadConfig() bool {
-	// Define CLI flags
-	sourceFlag := flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
-	bucketFlag := flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
-	prefixFlag := flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
-
 	// Parse CLI flags
 	flag.Parse()
 
