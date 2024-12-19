@@ -94,7 +94,7 @@ func validateConfig() bool {
 	for _, envVar := range requiredEnvVars {
 		if os.Getenv(envVar) == "" {
 			missingEnvVar = true
-			log.Fatalf("Environment variable %s is required", envVar)
+			log.Printf("Environment variable %s is required", envVar)
 		}
 	}
 

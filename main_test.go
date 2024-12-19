@@ -54,11 +54,9 @@ func TestLoadConfigMissingEnvVarsAndFlags(t *testing.T) {
 	os.Unsetenv("S3_BUCKET_NAME")
 	os.Unsetenv("S3_BUCKET_PREFIX")
 
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("Expected loadConfig to panic due to missing environment variables and flags")
-		}
-	}()
+	valid := loadConfig()
 
-	loadConfig()
+	if valid {
+		t.Errorf("Expected loadConfig to return false due to missing environment variables and flags")
+	}
 }
