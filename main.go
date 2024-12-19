@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	config configuration
+	config Configuration
 	// Define CLI flags
 	sourceFlag = flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
 	bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
@@ -25,11 +25,15 @@ var (
 )
 
 func main() {
+	// Create a wait group to wait for the watcher goroutine to finish
+	var wg sync.WaitGroup
+
 	// Initialize the application
 	inizialize()
 
 	// Load configuration values
-	if success := config.Load(); !success {
+	config.Load()
+	if success := config.Validate(); !success {
 		log.Fatal("Failed to load configuration")
 	}
 	log.Print("Starting S3 File Watcher")
@@ -39,9 +43,6 @@ func main() {
 
 	// Create a channel to receive events
 	ch := make(chan fsnotify.Event)
-
-	// Create a wait group to wait for the watcher goroutine to finish
-	var wg sync.WaitGroup
 
 	// Start a goroutine to listen to subscribed events
 	wg.Add(1)
@@ -120,7 +121,7 @@ func startEventHandler(ch chan fsnotify.Event) {
 		o.Region = config.aws_region
 	})
 
-	basicConfig := basic.BucketBasics{S3Client: client}
+	s3Config := basic.BucketBasics{S3Client: client}
 
 	// Handle events
 	for {
@@ -152,10 +153,10 @@ func startEventHandler(ch chan fsnotify.Event) {
 				log.Printf("Skipping empty file %s", filename)
 			} else if size > largeFileThreshold {
 				log.Printf("Uploading large file %s (%d bytes) at %s to %s", filename, size, path, objKey)
-				go basicConfig.UploadLargeFile(ctx, config.bucket_name, objKey, path)
+				go s3Config.UploadLargeFile(ctx, config.bucket_name, objKey, path)
 			} else {
 				log.Printf("Uploading file %s (%d bytes) at %s to %s", filename, size, path, objKey)
-				go basicConfig.UploadFile(ctx, config.bucket_name, objKey, path)
+				go s3Config.UploadFile(ctx, config.bucket_name, objKey, path)
 			}
 		}
 	}
