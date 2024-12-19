@@ -47,10 +47,18 @@ func main() {
 	var wg sync.WaitGroup
 
 	// Start a goroutine to listen to subscribed events
-	go startedFilteredWatcher(&wg, config.watch_dir, ch, events...)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		startedFilteredWatcher(config.watch_dir, ch, events...)
+	}()
 
 	// Start a goroutine to handle events
-	go startEventHandler(&wg, ch)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		startEventHandler(ch)
+	}()
 
 	// Yield the processor to allow other gorotines to run and prevent the main goroutine from exiting
 	runtime.Gosched() // kind of ugly, should find a better way to do this
@@ -114,10 +122,7 @@ func validateConfig() bool {
 }
 
 // startedFilteredWatcher starts a watcher on a directory and filters events based on the provided event list.
-func startedFilteredWatcher(wg *sync.WaitGroup, dir string, ch chan fsnotify.Event, events ...fsnotify.Op) {
-	wg.Add(1)
-	defer wg.Done()
-
+func startedFilteredWatcher(dir string, ch chan fsnotify.Event, events ...fsnotify.Op) {
 	// Create a watcher
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -150,11 +155,12 @@ func startedFilteredWatcher(wg *sync.WaitGroup, dir string, ch chan fsnotify.Eve
 
 // startEventHandler reacts to subscribed events.
 // Take care to handle the subscribed events in a separate goroutine to avoid blocking the watcher.
-func startEventHandler(wg *sync.WaitGroup, ch chan fsnotify.Event) {
+func startEventHandler(ch chan fsnotify.Event) {
 	const largeFileThreshold = 50 * 1024 * 1024 // 50 MiB
 
-	wg.Add(1)
-	defer wg.Done()
+	// Context for S3 upload
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// AWS Config
 	cfg, err := awsConfig.LoadDefaultConfig(context.TODO())
@@ -199,10 +205,10 @@ func startEventHandler(wg *sync.WaitGroup, ch chan fsnotify.Event) {
 				log.Printf("Skipping empty file %s", filename)
 			} else if size > largeFileThreshold {
 				log.Printf("Uploading large file %s (%d bytes) at %s to %s", filename, size, path, objKey)
-				go basicConfig.UploadLargeFile(wg, context.TODO(), config.bucket_name, objKey, path)
+				go basicConfig.UploadLargeFile(ctx, config.bucket_name, objKey, path)
 			} else {
 				log.Printf("Uploading file %s (%d bytes) at %s to %s", filename, size, path, objKey)
-				go basicConfig.UploadFile(wg, context.TODO(), config.bucket_name, objKey, path)
+				go basicConfig.UploadFile(ctx, config.bucket_name, objKey, path)
 			}
 		}
 	}
