@@ -6,16 +6,17 @@ import (
 	"testing"
 )
 
-func TestLoadConfigFromEnvVars(t *testing.T) {
+func TestLoadFromEnvVars(t *testing.T) {
 	os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
-	os.Setenv("WATCH_DIR", "/path/to/watch")
+	os.Setenv("WATCH_DIR", "./watch")
 	os.Setenv("S3_BUCKET_NAME", "my-s3-bucket")
 	os.Setenv("S3_BUCKET_PREFIX", "my-prefix")
 
-	loadConfig()
+	config := NewConfiguration()
+	config.Load()
 
-	if config.watch_dir != "/path/to/watch" {
-		t.Errorf("Expected watch_dir to be /path/to/watch, got %s", config.watch_dir)
+	if config.watch_dir != "./watch" {
+		t.Errorf("Expected watch_dir to be ./watch, got %s", config.watch_dir)
 	}
 	if config.bucket_name != "my-s3-bucket" {
 		t.Errorf("Expected bucket_name to be my-s3-bucket, got %s", config.bucket_name)
@@ -25,7 +26,7 @@ func TestLoadConfigFromEnvVars(t *testing.T) {
 	}
 }
 
-func TestLoadConfigFromFlags(t *testing.T) {
+func TestLoadFromFlags(t *testing.T) {
 	os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 	os.Setenv("WATCH_DIR", "./.vscode")
 	os.Setenv("S3_BUCKET_NAME", "my-s3-bucket")
@@ -36,7 +37,8 @@ func TestLoadConfigFromFlags(t *testing.T) {
 	flag.Set("prefix", "new-prefix")
 	flag.Set("region", "eu-central-1")
 
-	loadConfig()
+	config := NewConfiguration()
+	config.Load()
 
 	if config.watch_dir != "./watch" {
 		t.Errorf("Expected watch_dir to be ./watch, got %s", config.watch_dir)
@@ -52,33 +54,42 @@ func TestLoadConfigFromFlags(t *testing.T) {
 	}
 }
 
-func TestLoadConfigMissingEnvVarsAndFlags(t *testing.T) {
+func TestLoadMissingEnvVarsAndFlags(t *testing.T) {
 	os.Unsetenv("AWS_DEFAULT_REGION")
 	os.Unsetenv("WATCH_DIR")
 	os.Unsetenv("S3_BUCKET_NAME")
 	os.Unsetenv("S3_BUCKET_PREFIX")
 
-	valid := loadConfig()
+	config := NewConfiguration()
+	config.Load()
 
-	if !valid {
-		t.Errorf("Expected loadConfig to return false due to missing environment variables and flags")
+	if config.watch_dir != "" {
+		t.Errorf("Expected watch_dir to be empty, got %s", config.watch_dir)
 	}
+	if config.bucket_name != "" {
+		t.Errorf("Expected bucket_name to be empty, got %s", config.bucket_name)
+	}
+	if config.bucket_prefix != "" {
+		t.Errorf("Expected bucket_prefix to be empty, got %s", config.bucket_prefix)
+	}
+
 }
 
-func TestValidateConfigEnvVars(t *testing.T) {
+func TestValidateEnvVars(t *testing.T) {
 	os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
-	os.Setenv("WATCH_DIR", "/path/to/watch")
+	os.Setenv("WATCH_DIR", "./.vscode")
 	os.Setenv("S3_BUCKET_NAME", "my-s3-bucket")
 	os.Setenv("S3_BUCKET_PREFIX", "my-prefix")
 
-	valid := validateConfig()
+	config := NewConfiguration()
+	config.Load()
 
-	if !valid {
-		t.Errorf("Expected validateConfig to return true for valid configuration")
+	if success := config.Validate(); success != true {
+		t.Errorf("Expected Validate to return true for valid configuration, got %t", success)
 	}
 }
 
-func TestValidateConfigFlags(t *testing.T) {
+func TestValidateFlags(t *testing.T) {
 	os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
 	os.Setenv("WATCH_DIR", "./.vscode")
 	os.Setenv("S3_BUCKET_NAME", "my-s3-bucket")
@@ -89,22 +100,24 @@ func TestValidateConfigFlags(t *testing.T) {
 	flag.Set("prefix", "new-prefix")
 	flag.Set("region", "eu-central-1")
 
-	valid := validateConfig()
+	config := NewConfiguration()
+	config.Load()
 
-	if !valid {
-		t.Errorf("Expected validateConfig to return true for valid configuration")
+	if success := config.Validate(); success != true {
+		t.Errorf("Expected Validate to return true for valid configuration, got %t", success)
 	}
 }
 
-func TestValidateConfigMissingEnvVarsAndFlags(t *testing.T) {
+func TestValidateMissingEnvVarsAndFlags(t *testing.T) {
 	os.Unsetenv("AWS_DEFAULT_REGION")
 	os.Unsetenv("WATCH_DIR")
 	os.Unsetenv("S3_BUCKET_NAME")
 	os.Unsetenv("S3_BUCKET_PREFIX")
 
-	valid := validateConfig()
+	config := NewConfiguration()
+	config.Load()
 
-	if !valid {
-		t.Errorf("Expected validateConfig to return false due to missing environment variables")
+	if success := config.Validate(); success != false {
+		t.Errorf("Expected Validate to return false due to missing environment variables, got %t", success)
 	}
 }
