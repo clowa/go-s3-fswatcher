@@ -1,15 +1,22 @@
-//go:build integration
-// +build integration
-
 package main
 
 import (
+	"os"
 	"os/exec"
 	"testing"
 )
 
+func TestBuildBinary(m *testing.M) {
+	// Build the binary before running the tests
+	cmd := exec.Command("go", "build", "-o", "tests/go-s3-fswatcher")
+	if err := cmd.Run(); err != nil {
+		panic(err)
+	}
+}
+
 func TestIntegrationValidSourceFlag(t *testing.T) {
-	cmd := exec.Command("./go-s3-fswatcher", "--source", "/valid/path", "--bucket", "my-s3-bucket", "--prefix", "my-prefix")
+	cmd := exec.Command("./tests/go-s3-fswatcher", "--source", "/valid/path", "--bucket", "my-s3-bucket", "--prefix", "my-prefix")
+	cmd.Env = append(os.Environ(), "AWS_DEFAULT_REGION=us-west-2")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Expected no error, got %v. Output: %s", err, output)
@@ -17,7 +24,8 @@ func TestIntegrationValidSourceFlag(t *testing.T) {
 }
 
 func TestIntegrationInvalidSourceFlag(t *testing.T) {
-	cmd := exec.Command("./go-s3-fswatcher", "--source", "/invalid/path", "--bucket", "my-s3-bucket", "--prefix", "my-prefix")
+	cmd := exec.Command("./tests/go-s3-fswatcher", "--source", "/invalid/path", "--bucket", "my-s3-bucket", "--prefix", "my-prefix")
+	cmd.Env = append(os.Environ(), "AWS_DEFAULT_REGION=us-west-2")
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatalf("Expected error, got none. Output: %s", output)
@@ -29,7 +37,8 @@ func TestIntegrationInvalidSourceFlag(t *testing.T) {
 }
 
 func TestIntegrationValidBucketFlag(t *testing.T) {
-	cmd := exec.Command("./go-s3-fswatcher", "--source", "/valid/path", "--bucket", "my-s3-bucket", "--prefix", "my-prefix")
+	cmd := exec.Command("./tests/go-s3-fswatcher", "--source", "/valid/path", "--bucket", "my-s3-bucket", "--prefix", "my-prefix")
+	cmd.Env = append(os.Environ(), "AWS_DEFAULT_REGION=us-west-2")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Expected no error, got %v. Output: %s", err, output)
@@ -37,7 +46,8 @@ func TestIntegrationValidBucketFlag(t *testing.T) {
 }
 
 func TestIntegrationInvalidBucketFlag(t *testing.T) {
-	cmd := exec.Command("./go-s3-fswatcher", "--source", "/valid/path", "--bucket", "", "--prefix", "my-prefix")
+	cmd := exec.Command("./tests/go-s3-fswatcher", "--source", "/valid/path", "--bucket", "", "--prefix", "my-prefix")
+	cmd.Env = append(os.Environ(), "AWS_DEFAULT_REGION=us-west-2")
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatalf("Expected error, got none. Output: %s", output)
@@ -49,7 +59,8 @@ func TestIntegrationInvalidBucketFlag(t *testing.T) {
 }
 
 func TestIntegrationValidPrefixFlag(t *testing.T) {
-	cmd := exec.Command("./go-s3-fswatcher", "--source", "/valid/path", "--bucket", "my-s3-bucket", "--prefix", "my-prefix")
+	cmd := exec.Command("./tests/go-s3-fswatcher", "--source", "/valid/path", "--bucket", "my-s3-bucket", "--prefix", "my-prefix")
+	cmd.Env = append(os.Environ(), "AWS_DEFAULT_REGION=us-west-2")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		t.Fatalf("Expected no error, got %v. Output: %s", err, output)
@@ -57,7 +68,8 @@ func TestIntegrationValidPrefixFlag(t *testing.T) {
 }
 
 func TestIntegrationInvalidPrefixFlag(t *testing.T) {
-	cmd := exec.Command("./go-s3-fswatcher", "--source", "/valid/path", "--bucket", "my-s3-bucket", "--prefix", "")
+	cmd := exec.Command("./tests/go-s3-fswatcher", "--source", "/valid/path", "--bucket", "my-s3-bucket", "--prefix", "")
+	cmd.Env = append(os.Environ(), "AWS_DEFAULT_REGION=us-west-2")
 	output, err := cmd.CombinedOutput()
 	if err == nil {
 		t.Fatalf("Expected error, got none. Output: %s", output)

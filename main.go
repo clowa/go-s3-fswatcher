@@ -21,12 +21,14 @@ var (
 	sourceFlag = flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
 	bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
 	prefixFlag = flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
+	regionFlag = flag.String("region", "", "The AWS region to use. Example: us-west-2")
 )
 
 type configuration struct {
 	watch_dir     string
 	bucket_name   string
 	bucket_prefix string
+	aws_region    string
 }
 
 func main() {
@@ -81,6 +83,12 @@ func loadConfig() bool {
 		config.bucket_prefix = os.Getenv("S3_BUCKET_PREFIX")
 	}
 
+	if *regionFlag != "" {
+		config.aws_region = *regionFlag
+	} else {
+		config.aws_region = os.Getenv("AWS_DEFAULT_REGION")
+	}
+
 	// Validate configuration values
 	return validateConfig()
 }
@@ -88,17 +96,7 @@ func loadConfig() bool {
 // validateConfig encapsulates the validation logic for the configuration values.
 // It returns true if the configuration values are valid, false otherwise.
 func validateConfig() bool {
-	// Check for required environment variables are set
-	requiredEnvVars := []string{"AWS_DEFAULT_REGION", "WATCH_DIR", "S3_BUCKET_NAME", "S3_BUCKET_PREFIX"}
-	missingEnvVar := false
-	for _, envVar := range requiredEnvVars {
-		if os.Getenv(envVar) == "" {
-			missingEnvVar = true
-			log.Printf("Environment variable %s is required", envVar)
-		}
-	}
-
-	if missingEnvVar || (config.watch_dir == "" || config.bucket_name == "" || config.bucket_prefix == "") {
+	if config.watch_dir == "" || config.bucket_name == "" || config.bucket_prefix == "") {
 		log.Printf("Required configuration values are missing")
 		return false
 	}
@@ -116,6 +114,14 @@ func validateConfig() bool {
 	// Validate prefix
 	if config.bucket_prefix == "" {
 		log.Printf("Invalid S3 prefix. Please provide a valid prefix. Example: my-prefix/")
+	}
+
+	// Set default AWS region if not provided
+	if config.aws_region == "" {
+		config.aws_region = "us-west-2"
+		// Set environment variable to be picked up by AWS SDK
+		os.Setenv("AWS_DEFAULT_REGION", config.aws_region)
+		log.Printf("AWS_DEFAULT_REGION not set. Using default region: %s", config.aws_region)
 	}
 
 	return true

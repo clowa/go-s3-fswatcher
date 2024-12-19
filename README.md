@@ -16,3 +16,27 @@ The binary expects the following configuration:
 | `--prefix` | `S3_BUCKET_PREFIX` | The directory to upload to s3 | `my-prefix/` |
 
 If both CLI flags and environment variables are provided, the CLI flags will override the corresponding environment variables. If neither are provided, the program will terminate with an error message indicating the missing environment variables.
+
+## Run Tests
+
+### Run Unit Tests
+
+To run the unit tests of the whole project, use the following command:
+
+```sh
+go test ./...
+```
+
+### Running Integration Tests
+
+Make sure to build the binary before running the tests:
+
+```sh
+go build -o go-s3-fswatcher
+```
+
+To run the integration tests, use the following command:
+
+```sh
+go test ./... -tags=integration
+```

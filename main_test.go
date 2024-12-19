@@ -60,3 +60,29 @@ func TestLoadConfigMissingEnvVarsAndFlags(t *testing.T) {
 		t.Errorf("Expected loadConfig to return false due to missing environment variables and flags")
 	}
 }
+
+func TestValidateConfig(t *testing.T) {
+	os.Setenv("AWS_DEFAULT_REGION", "us-west-2")
+	os.Setenv("WATCH_DIR", "/path/to/watch")
+	os.Setenv("S3_BUCKET_NAME", "my-s3-bucket")
+	os.Setenv("S3_BUCKET_PREFIX", "my-prefix")
+
+	valid := validateConfig()
+
+	if !valid {
+		t.Errorf("Expected validateConfig to return true for valid configuration")
+	}
+}
+
+func TestValidateConfigMissingEnvVars(t *testing.T) {
+	os.Unsetenv("AWS_DEFAULT_REGION")
+	os.Unsetenv("WATCH_DIR")
+	os.Unsetenv("S3_BUCKET_NAME")
+	os.Unsetenv("S3_BUCKET_PREFIX")
+
+	valid := validateConfig()
+
+	if valid {
+		t.Errorf("Expected validateConfig to return false due to missing environment variables")
+	}
+}
