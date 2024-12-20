@@ -20,7 +20,7 @@ var (
 	sourceFlag = flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
 	bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
 	prefixFlag = flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
-	regionFlag = flag.String("region", "us-west-2", "The AWS region to use. Example: us-west-2")
+	regionFlag = flag.String("region", "", "The AWS region to use. Example: us-west-2")
 )
 
 func main() {

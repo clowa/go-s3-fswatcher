@@ -43,6 +43,18 @@ func (c *Configuration) Load() {
 	} else {
 		c.bucket_prefix = os.Getenv("S3_BUCKET_PREFIX")
 	}
+
+	if *regionFlag != "" {
+		c.aws_region = *regionFlag
+	} else {
+		if os.Getenv("AWS_REGION") != "" {
+			c.aws_region = os.Getenv("AWS_REGION")
+		} else {
+			// When no region flag has been set try using the AWS_DEFAULT_REGION environment variable.
+			// This will be an emptry string if the environment variable is not set.
+			c.aws_region = os.Getenv("AWS_DEFAULT_REGION")
+		}
+	}
 }
 
 // Validate encapsulates the validation logic for the configuration values.
