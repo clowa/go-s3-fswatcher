@@ -64,10 +64,7 @@ func (c *Configuration) Validate() bool {
 	}
 
 	// Validate prefix
-	if c.bucket_prefix == "" {
-		log.Printf("Invalid S3 prefix. Please provide a valid prefix. Example: my-prefix/")
-		valid = false
-	}
+	// An empty prefix is valid, so no need to validate it
 
 	// Validate AWS region
 	if c.aws_region == "" {
