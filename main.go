@@ -16,7 +16,6 @@ import (
 )
 
 var (
-	config Configuration
 	// Define CLI flags
 	sourceFlag = flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
 	bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
@@ -32,6 +31,7 @@ func main() {
 	inizialize()
 
 	// Load configuration values
+	config := NewConfiguration()
 	config.Load()
 	if success := config.Validate(); !success {
 		log.Fatal("Failed to load configuration")
@@ -55,7 +55,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		startEventHandler(ch)
+		startEventHandler(*config, ch)
 	}()
 
 	// Yield the processor to allow other gorotines to run and prevent the main goroutine from exiting
@@ -103,7 +103,7 @@ func startedFilteredWatcher(dir string, ch chan fsnotify.Event, events ...fsnoti
 
 // startEventHandler reacts to subscribed events.
 // Take care to handle the subscribed events in a separate goroutine to avoid blocking the watcher.
-func startEventHandler(ch chan fsnotify.Event) {
+func startEventHandler(config Configuration, ch chan fsnotify.Event) {
 	const largeFileThreshold = 50 * 1024 * 1024 // 50 MiB
 
 	// Context for S3 upload
