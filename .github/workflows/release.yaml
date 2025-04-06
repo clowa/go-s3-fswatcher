@@ -11,8 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read # Required to checkout the repository
+      id-token: write # Required to publish to GitHub Packages + Container Registry
       packages: write # Required to publish to GitHub Packages + Container Registry
-      attestations: write # Required to publish attestations
 
     steps:
       # Checkout the repository
