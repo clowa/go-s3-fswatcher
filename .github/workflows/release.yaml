@@ -13,7 +13,7 @@ jobs:
     name: Run GoReleaser
     runs-on: ubuntu-latest
     permissions:
-      contents: read # Required to checkout the repository
+      contents: write # Required to checkout the repository and create releases
       packages: write # Required to publish to GitHub Packages + Container Registry
 
     steps:
