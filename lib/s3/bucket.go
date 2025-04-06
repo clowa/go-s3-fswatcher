@@ -100,3 +100,40 @@ func (basics BucketBasics) UploadLargeFile(ctx context.Context, bucketName strin
 
 	return err
 }
+
+// RenameObject renames an object in a s3 bucket by server side copy and delete.
+// It copies the object to a new key and then deletes the old object.
+// S3 does not support renaming objects directly.
+func (basic BucketBasics) RenameObject(ctx context.Context, bucketName string, oldObjectKey string, newObjectKey string) error {
+	// Copy the object to the new key
+	_, err := basic.S3Client.CopyObject(ctx, &s3.CopyObjectInput{
+		Bucket:     aws.String(bucketName),
+		CopySource: aws.String(bucketName + "/" + oldObjectKey),
+		Key:        aws.String(newObjectKey),
+	})
+	if err != nil {
+		log.Printf("Couldn't rename file %v to %v. Here's why: %v\n", oldObjectKey, newObjectKey, err)
+		return err
+	}
+
+	// Wait for the new object to exist
+	err = s3.NewObjectExistsWaiter(basic.S3Client).Wait(
+		ctx, &s3.HeadObjectInput{Bucket: aws.String(bucketName), Key: aws.String(newObjectKey)}, time.Minute)
+	if err != nil {
+		log.Printf("Failed to wait for the new object %v to exist in bucket %v. Here's why: %v\n", newObjectKey, bucketName, err)
+		return err
+	}
+
+	// Delete the old object
+	_, err = basic.S3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(oldObjectKey),
+	})
+	if err != nil {
+		log.Printf("Couldn't delete old object %v in bucket %v. Here's why: %v\n", oldObjectKey, bucketName, err)
+		return err
+	}
+
+	log.Printf("Successfully renamed %v to %v in bucket %v.\n", oldObjectKey, newObjectKey, bucketName)
+	return nil
+}
