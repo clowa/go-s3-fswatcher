@@ -1,20 +1,16 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"log"
 	"os"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
 )
 
 type Configuration struct {
-	watch_dir     string
-	bucket_name   string
-	bucket_prefix string
-	aws_config    aws.Config
+	watch_dir string
+	// bucket_name   string
+	// bucket_prefix string
+	// aws_config    aws.Config
 }
 
 // NewConfiguration creates a new empty Configuration object.
@@ -24,16 +20,16 @@ func NewConfiguration() *Configuration {
 
 // Load loads configuration values from environment variables or CLI flags.
 func (c *Configuration) Load() {
-	var err error
+	// var err error
 
 	// Parse CLI flags
 	flag.Parse()
 
 	// Load AWS configuration
-	c.aws_config, err = config.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		log.Fatalf("Unable to load SDK config, %v", err)
-	}
+	// c.aws_config, err = config.LoadDefaultConfig(context.TODO())
+	// if err != nil {
+	// 	log.Fatalf("Unable to load SDK config, %v", err)
+	// }
 
 	// Load configuration from CLI flags or environment variables
 	if *sourceFlag == "" {
@@ -41,15 +37,15 @@ func (c *Configuration) Load() {
 	}
 	c.watch_dir = *sourceFlag
 
-	if *bucketFlag == "" {
-		log.Fatal("Please provide a bucket name using the -bucket flag.")
-	}
-	c.bucket_name = *bucketFlag
+	// if *bucketFlag == "" {
+	// 	log.Fatal("Please provide a bucket name using the -bucket flag.")
+	// }
+	// c.bucket_name = *bucketFlag
 
-	if *prefixFlag == "" {
-		log.Fatal("Please provide a prefix using the -prefix flag.")
-	}
-	c.bucket_prefix = *prefixFlag
+	// if *prefixFlag == "" {
+	// 	log.Fatal("Please provide a prefix using the -prefix flag.")
+	// }
+	// c.bucket_prefix = *prefixFlag
 }
 
 // Validate encapsulates the validation logic for the configuration values.

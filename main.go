@@ -1,25 +1,19 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"log"
 	"os"
-	"path/filepath"
-	"runtime"
 	"sync"
 
-	awsConfig "github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
-	basic "github.com/clowa/go-s3-fswatcher/lib/s3"
 	"github.com/fsnotify/fsnotify"
 )
 
 var (
 	// Define CLI flags
 	sourceFlag = flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
-	bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
-	prefixFlag = flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
+	// bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
+	// prefixFlag = flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
 )
 
 func main() {
@@ -38,6 +32,7 @@ func main() {
 	log.Print("Starting S3 File Watcher")
 
 	// Since files only have content after a Write event, we don't need to listen to Create events
+	// ToDo: add support for Rename and Delete events
 	events := []fsnotify.Op{fsnotify.Write}
 
 	// Create a channel to receive events
@@ -50,15 +45,8 @@ func main() {
 		startedFilteredWatcher(config.watch_dir, ch, events...)
 	}()
 
-	// Start a goroutine to handle events
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		startEventHandler(*config, ch)
-	}()
-
 	// Yield the processor to allow other gorotines to run and prevent the main goroutine from exiting
-	runtime.Gosched() // kind of ugly, should find a better way to do this
+	// runtime.Gosched() // ToDo: kind of ugly, should find a better way to do this
 	// Wait for all goroutines to finish
 	wg.Wait()
 }
@@ -91,67 +79,6 @@ func startedFilteredWatcher(dir string, ch chan fsnotify.Event, events ...fsnoti
 			}
 		case err := <-watcher.Errors:
 			panic(err)
-		}
-	}
-}
-
-// startEventHandler reacts to subscribed events.
-// Take care to handle the subscribed events in a separate goroutine to avoid blocking the watcher.
-func startEventHandler(config Configuration, ch chan fsnotify.Event) {
-	const largeFileThreshold = 50 * 1024 * 1024 // 50 MiB
-
-	// Context for S3 upload
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	// AWS Config
-	cfg, err := awsConfig.LoadDefaultConfig(context.TODO())
-	if err != nil {
-		log.Fatalf("unable to load AWS SDK default config: %v", err)
-	}
-
-	// Create an S3 client
-	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.Region = config.aws_config.Region
-	})
-
-	s3Config := basic.BucketBasics{S3Client: client}
-
-	// Handle events
-	for {
-		event := <-ch
-		switch event.Op {
-		case fsnotify.Write:
-			// Get infos about the file firing the event
-			filename := filepath.Base(event.Name)
-			path := event.Name
-			if !filepath.IsAbs(event.Name) {
-				path, err = filepath.Abs(event.Name)
-				if err != nil {
-					log.Fatalf("unable to get absolute path: %v", err)
-				}
-			}
-
-			// Upload to S3 since object has content
-			// On already existing S3 objects, we can do a hash check to avoid unnecessary uploads
-			// For simplicity, we'll upload the file on every Write event
-			objKey := filepath.Join(config.bucket_prefix, filename)
-			info, err := os.Stat(event.Name)
-			if err != nil {
-				log.Fatalf("unable to get file info: %v", err)
-			}
-			size := info.Size()
-
-			// Check if the file is larger than threshold. If it is, use the multipart upload to avoid loading whole file into memory
-			if size == 0 {
-				log.Printf("Skipping empty file %s", filename)
-			} else if size > largeFileThreshold {
-				log.Printf("Uploading large file %s (%d bytes) at %s to %s", filename, size, path, objKey)
-				go s3Config.UploadLargeFile(ctx, config.bucket_name, objKey, path)
-			} else {
-				log.Printf("Uploading file %s (%d bytes) at %s to %s", filename, size, path, objKey)
-				go s3Config.UploadFile(ctx, config.bucket_name, objKey, path)
-			}
 		}
 	}
 }
