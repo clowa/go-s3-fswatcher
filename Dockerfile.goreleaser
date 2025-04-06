@@ -1,0 +1,6 @@
+FROM scratch
+COPY go-s3-fswatcher /
+
+# What the container should run when it is started.
+ENTRYPOINT [ "/go-s3-fswatcher" ]
+CMD ["--help"]

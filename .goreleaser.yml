@@ -1,0 +1,69 @@
+project_name: go-s3-fswatcher
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+# General configuration
+builds:
+  - id: default
+    binary: go-s3-fswatcher
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    goarm:
+      - "7"
+    ldflags:
+      - "-s -w -X main.version={{.Tag}} -X main.commit={{.Commit}} -X main.buildDate={{.Date}} -X main.builtBy=goreleaser"
+
+# Docker configuration
+dockers:
+  - image_templates:
+      - "{{ .Env.REGISTRY }}/{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}-amd64"
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/amd64"
+      - "--pull"
+    goos: linux
+    goarch: amd64
+    dockerfile: Dockerfile.goreleaser
+  - image_templates:
+      - "{{ .Env.REGISTRY }}/{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}-arm64"
+    use: buildx
+    build_flag_templates:
+      - "--platform=linux/arm64"
+      - "--pull"
+    goos: linux
+    goarch: arm64
+    dockerfile: Dockerfile.goreleaser
+
+docker_manifests:
+  - name_template: "{{ .Env.REGISTRY }}/{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}"
+    image_templates:
+      - "{{ .Env.REGISTRY }}/{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}-amd64"
+      - "{{ .Env.REGISTRY }}/{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}-arm64"
+
+# GitHub release configuration
+release:
+  github:
+    owner: "{{ .Env.ORG }}"
+    name: "{{ .Env.REPO }}"
+
+# Archive configuration for binary builds
+archives:
+  - id: default
+    formats: tar.gz
+    name_template: >-
+      {{ .Binary }}_
+      {{ .Tag }}_
+      {{ .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
