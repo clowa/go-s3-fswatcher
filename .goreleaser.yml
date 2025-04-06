@@ -1,4 +1,5 @@
 project_name: go-s3-fswatcher
+version: 2
 
 before:
   hooks:
@@ -53,7 +54,7 @@ release:
 # Archive configuration for binary builds
 archives:
   - id: default
-    format: tar.gz
+    formats: tar.gz
     name_template: >-
       {{ .Binary }}_
       {{ .Tag }}_
@@ -62,10 +63,3 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-    files:
-      - LICENSE
-      - README.md
-
-# Snapshot configuration for local testing
-snapshot:
-  name_template: "{{ .Tag }}-SNAPSHOT"
