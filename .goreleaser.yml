@@ -44,10 +44,10 @@ dockers:
     dockerfile: Dockerfile.goreleaser
 
 docker_manifests:
-  - name_template: "{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}"
+  - name_template: "{{ .Env.REGISTRY }}/{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}"
     image_templates:
-      - "{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}-amd64"
-      - "{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}-arm64"
+      - "{{ .Env.REGISTRY }}/{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}-amd64"
+      - "{{ .Env.REGISTRY }}/{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}-arm64"
 
 # GitHub release configuration
 release:
