@@ -1,19 +1,23 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
+	"path/filepath"
 	"sync"
 
+	"github.com/aws/aws-sdk-go-v2/service/s3"
+	basic "github.com/clowa/go-s3-fswatcher/lib/s3"
 	"github.com/fsnotify/fsnotify"
 )
 
 var (
 	// Define CLI flags
 	sourceFlag = flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
-	// bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
-	// prefixFlag = flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
+	bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
+	prefixFlag = flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
 )
 
 type CustomFileEvent struct {
@@ -50,6 +54,7 @@ func main() {
 	go func() {
 		defer wg.Done()
 		watchAndFilterEvents(config.watch_dir, fsnotifyCh, events...)
+		close(fsnotifyCh)
 	}()
 
 	// Start a goroutine to populate the events with additional information
@@ -57,15 +62,14 @@ func main() {
 	go func() {
 		defer wg.Done()
 		transformEvents(fsnotifyCh, customNotifyCh)
+		close(customNotifyCh)
 	}()
 
 	// Start a goroutine which logs the custom events
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for event := range customNotifyCh {
-			log.Printf("Custom event received: %s, %s, %s", event.Op, event.Path, event.Destionation)
-		}
+		handleFileEvents(*config, customNotifyCh)
 	}()
 
 	// Yield the processor to allow other gorotines to run and prevent the main goroutine from exiting
@@ -134,5 +138,85 @@ func transformEvents(s chan fsnotify.Event, d chan CustomFileEvent) {
 		log.Printf("Transforming event: %s, %s, %s", ce.Op, ce.Path, ce.Destionation)
 
 		d <- ce
+	}
+}
+
+// handleFileEvents reacts to subscribed events.
+// Take care to handle the subscribed events in a separate goroutine to avoid blocking the watcher.
+func handleFileEvents(config Configuration, ch chan CustomFileEvent) {
+	const largeFileThreshold = 50 * 1024 * 1024 // 50 MiB
+
+	// Context for S3 upload
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// Create an S3 client
+	client := s3.NewFromConfig(config.aws_config)
+
+	s3Config := basic.BucketBasics{S3Client: client}
+
+	// Handle events
+	for {
+		event := <-ch
+		switch event.Op {
+		// ToDo: race condtion - multiple goroutines may attempt to upload the same file at the same time
+		case fsnotify.Write:
+			// Get infos about the file firing the event
+			path := event.Path
+			filename := filepath.Base(path)
+			if !filepath.IsAbs(path) {
+				_, err := filepath.Abs(path)
+				if err != nil {
+					log.Fatalf("unable to get absolute path: %v", err)
+				}
+			}
+
+			// Upload to S3 since object has content
+			// On already existing S3 objects, we can do a hash check to avoid unnecessary uploads
+			// For simplicity, we'll upload the file on every Write event
+			objKey := filepath.Join(config.bucket_prefix, filename)
+			info, err := os.Stat(path)
+			if err != nil {
+				log.Fatalf("unable to get file info: %v", err)
+			}
+			size := info.Size()
+
+			// Check if the file is larger than threshold. If it is, use the multipart upload to avoid loading whole file into memory
+			if size == 0 {
+				log.Printf("Skipping empty file %s", filename)
+			} else if size > largeFileThreshold {
+				log.Printf("Uploading large file %s (%d bytes) at %s to %s", filename, size, path, objKey)
+
+				go func() {
+					if err := s3Config.UploadLargeFile(ctx, config.bucket_name, objKey, path); err != nil {
+						log.Printf("Failed to upload large file %s: %v", objKey, err)
+					}
+				}()
+			} else {
+				log.Printf("Uploading file %s (%d bytes) at %s to %s", filename, size, path, objKey)
+
+				go func() {
+					if err := s3Config.UploadFile(ctx, config.bucket_name, objKey, path); err != nil {
+						log.Printf("Failed to upload file %s: %v", objKey, err)
+					}
+				}()
+			}
+
+		case fsnotify.Rename:
+			// Handle rename event
+			path := event.Path
+			currentObjectKey := filepath.Join(config.bucket_prefix, filepath.Base(path))
+			newObjectKey := filepath.Join(config.bucket_prefix, filepath.Base(event.Destionation))
+
+			log.Printf("Renaming object %s to %s", currentObjectKey, newObjectKey)
+			go func() {
+				// Rename the object in S3
+				err := s3Config.RenameObject(ctx, config.bucket_name, currentObjectKey, newObjectKey)
+				if err != nil {
+					log.Printf("Failed to rename object %s to %s: %v", currentObjectKey, newObjectKey, err)
+				}
+			}()
+
+		}
 	}
 }
