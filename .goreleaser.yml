@@ -30,14 +30,18 @@ dockers:
     build_flag_templates:
       - "--platform=linux/amd64"
       - "--pull"
+    goos: linux
     goarch: amd64
+    dockerfile: Dockerfile.goreleaser
   - image_templates:
       - "gcr.io/{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}-arm64"
     use: buildx
     build_flag_templates:
       - "--platform=linux/arm64"
       - "--pull"
+    goos: linux
     goarch: arm64
+    dockerfile: Dockerfile.goreleaser
 
 docker_manifests:
   - name_template: "{{ .Env.ORG }}/{{ .Env.REPO }}:{{ .Tag }}"
