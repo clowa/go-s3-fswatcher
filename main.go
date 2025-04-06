@@ -20,7 +20,6 @@ var (
 	sourceFlag = flag.String("source", "", "The directory to upload to s3. Example: /path/to/source")
 	bucketFlag = flag.String("bucket", "", "The name of the bucket to upload the files to. Example: my-s3-bucket")
 	prefixFlag = flag.String("prefix", "", "The directory to upload to s3. Example: my-prefix/")
-	regionFlag = flag.String("region", "", "The AWS region to use. Example: us-west-2")
 )
 
 func main() {
@@ -28,7 +27,7 @@ func main() {
 	var wg sync.WaitGroup
 
 	// Initialize the application
-	inizialize()
+	log.SetOutput(os.Stdout)
 
 	// Load configuration values
 	config := NewConfiguration()
@@ -62,11 +61,6 @@ func main() {
 	runtime.Gosched() // kind of ugly, should find a better way to do this
 	// Wait for all goroutines to finish
 	wg.Wait()
-}
-
-func inizialize() {
-	// Log to stdout
-	log.SetOutput(os.Stdout)
 }
 
 // startedFilteredWatcher starts a watcher on a directory and filters events based on the provided event list.
@@ -118,7 +112,7 @@ func startEventHandler(config Configuration, ch chan fsnotify.Event) {
 
 	// Create an S3 client
 	client := s3.NewFromConfig(cfg, func(o *s3.Options) {
-		o.Region = config.aws_region
+		o.Region = config.aws_config.Region
 	})
 
 	s3Config := basic.BucketBasics{S3Client: client}
