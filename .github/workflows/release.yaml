@@ -9,6 +9,10 @@ jobs:
   release:
     name: Run GoReleaser
     runs-on: ubuntu-latest
+    permissions:
+      contents: read # Required to checkout the repository
+      packages: write # Required to publish to GitHub Packages + Container Registry
+      attestations: write # Required to publish attestations
 
     steps:
       # Checkout the repository
